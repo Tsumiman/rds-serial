@@ -77,10 +77,22 @@ class RegisterVerifier: public verifier
       RegisterVerifier() { id = VERIFIER_ID; } //use parameter to instanciate template
 };
 
+#include "../rds_utils.hpp"
+#include <iostream>
+template <typename V> algorithm_run rds_run(ordering order, bool reverse, bool do_complement, unsigned int time_limit, const std::string& graph_file) {
+  V verifier;
+  std::cerr<<"RDS called with verifier " << verifier.get_name() << std::endl;
+  std::cerr<<"Type is " << typeid(verifier).name() << std::endl;
+  /* do stuff */
+  algorithm_run result;
+  return result;
+}
+
 class VerifierManager
 {
   public:
     using Method = std::function<verifier*()>;
+    using RDSMethod = std::function<algorithm_run(ordering, bool, bool, unsigned int, const std::string&)>;
 
     static VerifierManager *instance()
     {
@@ -88,7 +100,7 @@ class VerifierManager
       return &inst;
     }
 
-    uint16_t Register(Method method)
+    uint16_t Register(Method method, RDSMethod method_rds)
     {
       auto&& v = method();
       if (verifiers_by_shortcut.find(v->get_shortcut()) !=
@@ -100,6 +112,7 @@ class VerifierManager
       verifiers[++lastID] = method;
       verifiers_by_name[v->get_name()] = method;
       verifiers_by_shortcut[v->get_shortcut()] = method;
+      verifiers_by_shortcut_rds[v->get_shortcut()] = method_rds;
       delete v;
       return lastID;
     }
@@ -107,6 +120,10 @@ class VerifierManager
     std::shared_ptr<verifier> create(uint16_t verid)
     {
       return std::shared_ptr<verifier>(verifiers[verid]());
+    }
+
+    RDSMethod get_rds(const std::string& shortcut) const {
+      return verifiers_by_shortcut_rds.at(shortcut);
     }
 
     size_t count() const {
@@ -127,6 +144,7 @@ class VerifierManager
     std::map<uint16_t, Method> verifiers;
     std::map<std::string, Method> verifiers_by_name;
     std::map<std::string, Method> verifiers_by_shortcut;
+    std::map<std::string, RDSMethod> verifiers_by_shortcut_rds;
     uint16_t lastID = 0;
 
   private:
@@ -138,5 +156,5 @@ class VerifierManager
 
 template <typename Derived>
 const uint16_t RegisterVerifier<Derived>::VERIFIER_ID =
-  VerifierManager::instance()->Register(&RegisterVerifier<Derived>::create);
+  VerifierManager::instance()->Register(&RegisterVerifier<Derived>::create, rds_run<Derived>);
 #endif

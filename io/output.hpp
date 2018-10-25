@@ -3,6 +3,7 @@
 #include <iostream>
 #include "../rds.h"
 #include "../utils.hpp"
+#include "../rds_utils.hpp"
 
 namespace output
 {

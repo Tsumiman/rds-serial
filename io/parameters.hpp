@@ -49,6 +49,7 @@ std::shared_ptr<verifier> parse_verifier(const int argc, const char* const argv[
   for (int i = 1; i < argc - 1; ++i) {
     std::string arg(argv[i]);
     if (VerifierManager::instance()->is_shortcut(arg)) {
+      VerifierManager::instance()->get_rds(arg)(ordering::None, false, false, 5, std::string("acsa"));
       auto v = VerifierManager::instance()->create(arg);
       for(uint p = 0; p < v->number_of_parametes(); ++p) {
         v->provide_parameter(std::stoi(argv[++i]));
