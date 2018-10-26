@@ -7,6 +7,7 @@
 #include <functional>
 #include <memory>
 #include "../graph/graph.h"
+#include "../rds/rds_utils.hpp"
 #include <iostream>
 
 class verifier
@@ -77,17 +78,6 @@ class RegisterVerifier: public verifier
       RegisterVerifier() { id = VERIFIER_ID; } //use parameter to instanciate template
 };
 
-#include "../rds_utils.hpp"
-#include <iostream>
-template <typename V> algorithm_run rds_run(ordering order, bool reverse, bool do_complement, unsigned int time_limit, const std::string& graph_file) {
-  V verifier;
-  std::cerr<<"RDS called with verifier " << verifier.get_name() << std::endl;
-  std::cerr<<"Type is " << typeid(verifier).name() << std::endl;
-  /* do stuff */
-  algorithm_run result;
-  return result;
-}
-
 class VerifierManager
 {
   public:
@@ -156,5 +146,5 @@ class VerifierManager
 
 template <typename Derived>
 const uint16_t RegisterVerifier<Derived>::VERIFIER_ID =
-  VerifierManager::instance()->Register(&RegisterVerifier<Derived>::create, rds_run<Derived>);
+  VerifierManager::instance()->Register(&RegisterVerifier<Derived>::create, run_rds<Derived>);
 #endif

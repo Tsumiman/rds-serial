@@ -1,4 +1,10 @@
-#include "rds.h"
+#ifndef _RDS_H
+#define _RDS_H
+
+#include <vector>
+#include <string>
+#include "../verifiers/verifier.hpp"
+#include "rds_utils.hpp"
 #include <vector>
 #include <algorithm>
 #include <ctime>
@@ -7,26 +13,11 @@
 #include <chrono>
 #include <cstdlib>
 #include <omp.h>
+#include <atomic>
+#include <csignal>
 
-#include <csignal> // Display best result for SIGINT before exit
-
-#ifndef max
-#define max(a,b) (((a)>(b))?(a):(b))
-#endif
-
-using namespace std;
-
-typedef unsigned int uint;
-
-atomic_uint lb;
-
-// for debug
-void print_cont(const vector<uint>& c)
-{
-  for(auto it = c.begin(); it != c.end(); ++it)
-    fprintf(stderr, "%u ", *it);
-  fprintf(stderr, "\n");
-}
+std::atomic_bool should_exit (false);
+std::atomic_uint lb;
 
 void print_lb_atomic(int signal)
 {
@@ -35,23 +26,7 @@ void print_lb_atomic(int signal)
   exit(0);
 }
 
-atomic_uint iter (0);
-atomic_bool should_exit (false);
-
-inline bool check_iuc(const std::vector<uint>& p, uint n, graph* g) {
-  uint a = p.back();
-  for(uint b : p)
-  {
-    if(a == b)
-      continue;
-    if(g->is_edge(a,b) + g->is_edge(a,n) + g->is_edge(b,n) == 2)
-      return false;
-  }
-  return true;
-}
-
-void find_max(vector<vertex_set>& c, vertex_set& p, const uint* mu, verifier *v, graph* g, vector<uint>& res, int level, const chrono::time_point<chrono::steady_clock> start, const uint time_lim)
-{
+template <typename Verifier> void find_max(std::vector<vertex_set>& c, vertex_set& p, const uint* mu, Verifier *v, graph* g, std::vector<uint>& res, int level, const std::chrono::time_point<std::chrono::steady_clock> start, const uint time_lim) {
   auto& curC = c[level];
   if(should_exit)
     return;
@@ -62,7 +37,7 @@ void find_max(vector<vertex_set>& c, vertex_set& p, const uint* mu, verifier *v,
       #pragma omp critical (lbupdate)
       {
       res = p.vertices; //copy
-      lb.store(max(lb.load(), p.weight));
+      lb.store(std::max(lb.load(), p.weight));
       }
       return;
     }
@@ -105,10 +80,10 @@ void find_max(vector<vertex_set>& c, vertex_set& p, const uint* mu, verifier *v,
   return;
 }
 
-uint rds(verifier* v, graph* g, algorithm_run& runtime)
+template <typename Verifier> uint rds(Verifier* v, graph* g, algorithm_run& runtime)
 {
   uint time_lim = runtime.time_limit;
-  chrono::time_point<chrono::steady_clock> start = chrono::steady_clock::now(); // C++11 only
+  auto start = std::chrono::steady_clock::now(); // C++11 only
   should_exit = false;
   uint n = g->nr_nodes;
   // order V
@@ -151,7 +126,7 @@ uint rds(verifier* v, graph* g, algorithm_run& runtime)
       // clone for separate threads
       auto v_ = v->clone();
       v_->init_aux(i, curC);
-      vector<vertex_set> c_(c);
+      std::vector<vertex_set> c_(c);
       vertex_set p_(p);
 
       uint thread_i = omp_get_thread_num();
@@ -198,11 +173,11 @@ uint rds(verifier* v, graph* g, algorithm_run& runtime)
       mu_i = lb.load();
       #pragma omp critical
       {
-        mu[i] = max(mu_i, mu[i]);
+        mu[i] = std::max(mu_i, mu[i]);
       }
       if(time_lim > 0)
       {
-        chrono::duration<double> d = chrono::steady_clock::now() - start;
+        auto d = std::chrono::steady_clock::now() - start;
         if(static_cast<uint>(d.count()) >= time_lim)
           should_exit = true;
       }
@@ -216,8 +191,10 @@ uint rds(verifier* v, graph* g, algorithm_run& runtime)
   runtime.last_i   = i+1;
   runtime.value    = mu[i+1];
   runtime.complete = ((i+1)==0);
-  runtime.time     = chrono::steady_clock::now() - start;
+  runtime.time     = std::chrono::steady_clock::now() - start;
 
   delete [] mu;
   return runtime.value;
 }
+
+#endif

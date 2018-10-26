@@ -1,9 +1,8 @@
 #ifndef _OUTPUT_HPP
 #define _OUTPUT_HPP
 #include <iostream>
-#include "../rds.h"
 #include "../utils.hpp"
-#include "../rds_utils.hpp"
+#include "../rds/rds_utils.hpp"
 
 namespace output
 {
